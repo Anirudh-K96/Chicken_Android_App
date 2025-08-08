@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.livedata.observeAsState
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity()
 
     private val customerViewModel: CustomerViewModel by viewModels {
         CustomerViewModelFactory(application)

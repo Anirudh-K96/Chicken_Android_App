@@ -8,58 +8,77 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.indianchickencenter.model.Order
+import java.util.Date
 
 @Composable
 fun OrdersScreen(
     orders: List<Order>,
     onAddOrder: (Order) -> Unit
 ) {
-    var quantity by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
+    var customerId by remember { mutableStateOf("") }
+    var quantityKg by remember { mutableStateOf("") }
+    var pricePerKg by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("Add New Order", style = MaterialTheme.typography.titleLarge)
-
-        Spacer(Modifier.height(8.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        OutlinedTextField(
+            value = customerId,
+            onValueChange = { customerId = it },
+            label = { Text("Customer ID") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         OutlinedTextField(
-            value = quantity,
-            onValueChange = { quantity = it },
+            value = quantityKg,
+            onValueChange = { quantityKg = it },
             label = { Text("Quantity (kg)") },
             modifier = Modifier.fillMaxWidth()
         )
 
         OutlinedTextField(
-            value = price,
-            onValueChange = { price = it },
+            value = pricePerKg,
+            onValueChange = { pricePerKg = it },
             label = { Text("Price per kg") },
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
-                val qty = quantity.toDoubleOrNull() ?: 0.0
-                val prc = price.toDoubleOrNull() ?: 0.0
-                if (qty > 0 && prc > 0) {
-                    onAddOrder(Order(quantity = qty, price = prc, date = System.currentTimeMillis().toString(), customerId = 1))
-                    quantity = ""
-                    price = ""
+                val custId = customerId.toIntOrNull()
+                val qty = quantityKg.toDoubleOrNull()
+                val price = pricePerKg.toDoubleOrNull()
+
+                if (custId != null && qty != null && price != null) {
+                    onAddOrder(
+                        Order(
+                            customerId = custId,
+                            date = Date(),
+                            quantityKg = qty,
+                            pricePerKg = price
+                        )
+                    )
+                    customerId = ""
+                    quantityKg = ""
+                    pricePerKg = ""
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Save Order")
+            Text("Add Order")
         }
 
-        Spacer(Modifier.height(16.dp))
-        Text("Order History", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Orders", style = MaterialTheme.typography.titleMedium)
 
         LazyColumn {
             items(orders) { order ->
-                Text("Qty: ${order.quantity}kg, Price: ₹${order.price} - ${order.date}")
-                Divider()
+                Text("- Customer ${order.customerId}: ${order.quantityKg} kg @ ₹${order.pricePerKg} on ${order.date}")
             }
         }
     }

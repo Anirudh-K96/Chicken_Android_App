@@ -4,9 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.indianchickencenter.model.OrderRepository
 
-class OrderViewModelFactory(
-    private val repository: OrderRepository
-) : ViewModelProvider.Factory {
+class OrderViewModelFactory(private val repository: OrderRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OrderViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
