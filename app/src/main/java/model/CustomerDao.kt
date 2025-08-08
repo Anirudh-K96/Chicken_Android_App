@@ -1,13 +1,17 @@
 package com.example.indianchickencenter.model
 
-    import androidx.lifecycle.LiveData
-    import androidx.room.*
+import androidx.lifecycle.LiveData
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
-    @Dao
-    interface CustomerDao {
-        @Insert(onConflict = OnConflictStrategy.REPLACE)
-        suspend fun insert(customer: Customer)
+@Dao
+interface CustomerDao {
 
-        @Query("SELECT * FROM customers ORDER BY id DESC")
-        fun getAllCustomers(): LiveData<List<Customer>>
-    }
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(customer: Customer)
+
+    @Query("SELECT * FROM customers ORDER BY id DESC")
+    fun getAllCustomers(): LiveData<List<Customer>>
+}

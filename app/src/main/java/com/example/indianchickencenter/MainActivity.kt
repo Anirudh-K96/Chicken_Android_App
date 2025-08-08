@@ -4,30 +4,31 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.*
-import androidx.room.Room
-import com.example.indianchickencenter.model.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.indianchickencenter.model.AppDatabase
+import com.example.indianchickencenter.model.Customer
+import com.example.indianchickencenter.model.OrderRepository
 import com.example.indianchickencenter.ui.OrdersScreen
 import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
 import com.example.indianchickencenter.viewmodel.CustomerViewModel
 import com.example.indianchickencenter.viewmodel.CustomerViewModelFactory
 import com.example.indianchickencenter.viewmodel.OrderViewModel
 import com.example.indianchickencenter.viewmodel.OrderViewModelFactory
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.livedata.observeAsState
 
-class MainActivity : ComponentActivity()
+class MainActivity : ComponentActivity() {
 
     private val customerViewModel: CustomerViewModel by viewModels {
         CustomerViewModelFactory(application)
@@ -36,25 +37,18 @@ class MainActivity : ComponentActivity()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Create DB + Repository for Orders
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "chicken-db"
-        ).build()
-
-        val orderRepository = OrderRepository(db.orderDao())
+        val orderRepository = OrderRepository(
+            AppDatabase.getDatabase(application).orderDao()
+        )
         val orderFactory = OrderViewModelFactory(orderRepository)
-        val orderViewModel: OrderViewModel = viewModel(factory = orderFactory)
 
         setContent {
             IndianChickenCenterTheme {
                 val navController = rememberNavController()
+                val orderViewModel: OrderViewModel = viewModel(factory = orderFactory)
 
                 Scaffold(
-                    bottomBar = {
-                        BottomNavigationBar(navController)
-                    }
+                    bottomBar = { BottomNavigationBar(navController) }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
@@ -85,10 +79,11 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
 
     val customers by viewModel.allCustomers.observeAsState(emptyList())
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         OutlinedTextField(
             value = shopName,
             onValueChange = { shopName = it },
@@ -115,7 +110,9 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
         Button(
             onClick = {
                 if (shopName.isNotBlank() && ownerName.isNotBlank() && contact.isNotBlank()) {
-                    viewModel.insert(Customer(shopName = shopName, ownerName = ownerName, contact = contact))
+                    viewModel.insert(
+                        Customer(shopName = shopName, ownerName = ownerName, contact = contact)
+                    )
                     shopName = ""
                     ownerName = ""
                     contact = ""

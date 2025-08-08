@@ -1,8 +1,16 @@
 package com.example.indianchickencenter.model
 
-class OrderRepository(private val orderDao: OrderDao) {
-    fun getAllOrders() = orderDao.getAllOrders()
-    fun getOrdersForCustomer(customerId: Int) = orderDao.getOrdersForCustomer(customerId)
-    suspend fun insert(order: Order) = orderDao.insert(order)
-    suspend fun delete(order: Order) = orderDao.delete(order)
+import kotlinx.coroutines.flow.Flow
+
+class OrderRepository(private val dao: OrderDao) {
+
+    fun getAllOrders(): Flow<List<Order>> = dao.getAllOrders()
+
+    suspend fun insert(order: Order) {
+        dao.insert(order)
+    }
+
+    suspend fun delete(order: Order) {
+        dao.delete(order)
+    }
 }

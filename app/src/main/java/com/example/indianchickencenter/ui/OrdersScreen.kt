@@ -74,11 +74,18 @@ fun OrdersScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Orders", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Orders",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn {
             items(orders) { order ->
-                Text("- Customer ${order.customerId}: ${order.quantityKg} kg @ ₹${order.pricePerKg} on ${order.date}")
+                Text(
+                    "- Customer ${order.customerId}: ${order.quantityKg} kg @ ₹${order.pricePerKg} on ${order.date}"
+                )
             }
         }
     }

@@ -6,12 +6,10 @@ import java.util.Date
 
 @Entity(tableName = "orders")
 data class Order(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
     val customerId: Int,
     val date: Date,
     val quantityKg: Double,
     val pricePerKg: Double
-) {
-    val totalPrice: Double
-        get() = quantityKg * pricePerKg
-}
+)
