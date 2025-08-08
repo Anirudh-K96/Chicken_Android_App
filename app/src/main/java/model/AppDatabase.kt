@@ -8,6 +8,7 @@ package com.example.indianchickencenter.model
     @Database(entities = [Customer::class], version = 1)
     abstract class AppDatabase : RoomDatabase() {
         abstract fun customerDao(): CustomerDao
+        abstract fun orderDao(): OrderDao
 
         companion object {
             @Volatile private var INSTANCE: AppDatabase? = null
