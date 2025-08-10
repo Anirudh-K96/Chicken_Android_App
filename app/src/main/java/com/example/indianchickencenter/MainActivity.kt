@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -12,17 +14,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import com.example.indianchickencenter.model.AppDatabase
 import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.OrderRepository
-import com.example.indianchickencenter.ui.OrdersScreen
+import com.example.indianchickencenter.ui.BottomNavigationBar
 import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
+import com.example.indianchickencenter.ui.OrdersScreen
 import com.example.indianchickencenter.viewmodel.CustomerViewModel
 import com.example.indianchickencenter.viewmodel.CustomerViewModelFactory
 import com.example.indianchickencenter.viewmodel.OrderViewModel
@@ -37,15 +39,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val orderRepository = OrderRepository(
-            AppDatabase.getDatabase(application).orderDao()
-        )
+        // Create DB + Repository for Orders
+        val db = Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java,
+            "chicken-db"
+        ).build()
+
+        val orderRepository = OrderRepository(db.orderDao())
         val orderFactory = OrderViewModelFactory(orderRepository)
+        val orderViewModel: OrderViewModel by viewModels { orderFactory }
 
         setContent {
             IndianChickenCenterTheme {
                 val navController = rememberNavController()
-                val orderViewModel: OrderViewModel = viewModel(factory = orderFactory)
 
                 Scaffold(
                     bottomBar = { BottomNavigationBar(navController) }
@@ -111,7 +118,11 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
             onClick = {
                 if (shopName.isNotBlank() && ownerName.isNotBlank() && contact.isNotBlank()) {
                     viewModel.insert(
-                        Customer(shopName = shopName, ownerName = ownerName, contact = contact)
+                        Customer(
+                            shopName = shopName,
+                            ownerName = ownerName,
+                            contact = contact
+                        )
                     )
                     shopName = ""
                     ownerName = ""
@@ -134,35 +145,3 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
         }
     }
 }
-
-@Composable
-fun BottomNavigationBar(navController: NavHostController) {
-    val items = listOf(
-        BottomNavItem("Customers", "customers", Icons.Default.Person),
-        BottomNavItem("Orders", "orders", Icons.Default.ShoppingCart)
-    )
-
-    NavigationBar {
-        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-        items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.name) },
-                label = { Text(item.name) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
-}
-
-data class BottomNavItem(
-    val name: String,
-    val route: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
-)

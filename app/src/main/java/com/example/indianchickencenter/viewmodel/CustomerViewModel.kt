@@ -1,7 +1,12 @@
-package com.example.indianchickencenter.model
+package com.example.indianchickencenter.viewmodel
 
 import android.app.Application
-import androidx.lifecycle.*
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.viewModelScope
+import com.example.indianchickencenter.model.AppDatabase
+import com.example.indianchickencenter.model.Customer
+import com.example.indianchickencenter.model.CustomerRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
