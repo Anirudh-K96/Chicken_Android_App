@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
             IndianChickenCenterTheme {
                 val navController = rememberNavController()
 
+                // ✅ Use viewModel(factory=...) inside Compose
                 val orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                     factory = orderFactory
                 )
@@ -68,9 +69,10 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("orders") {
                             OrdersScreen(
-                                orders = orderViewModel.allOrders.collectAsState(initial = emptyList()).value,
+                                orders = orderViewModel.allOrders.collectAsState().value,
                                 customers = customerViewModel.allCustomers.observeAsState(emptyList()).value,
-                                onAddOrder = { orderViewModel.insert(it) }
+                                onAddOrder = { orderViewModel.insert(it) },
+                                onDeleteOrder = { orderViewModel.delete(it) }   // ✅ delete order
                             )
                         }
                     }

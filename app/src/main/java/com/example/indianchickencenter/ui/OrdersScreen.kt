@@ -9,15 +9,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.Order
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrdersScreen(
     orders: List<Order>,
-    customers: List<Customer>,   // ✅ now passed correctly from MainActivity
-    onAddOrder: (Order) -> Unit
+    customers: List<Customer>,
+    onAddOrder: (Order) -> Unit,
+    onDeleteOrder: (Order) -> Unit   // 👈 added callback
 ) {
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
     var expanded by remember { mutableStateOf(false) }
@@ -109,14 +112,28 @@ fun OrdersScreen(
 
         Text("Orders", style = MaterialTheme.typography.titleMedium)
 
-        val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
-
         LazyColumn {
             items(orders) { order ->
                 val customer = customers.find { it.id == order.customerId }
                 val customerName = customer?.shopName ?: "Unknown Customer"
-                val formattedDate = dateFormatter.format(order.date)
-                Text("- $customerName: ${order.quantityKg} kg @ ₹${order.pricePerKg} on $formattedDate")
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "- $customerName: ${order.quantityKg} kg @ ₹${order.pricePerKg} on ${order.date}",
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { onDeleteOrder(order) }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Order"
+                        )
+                    }
+                }
             }
         }
     }
