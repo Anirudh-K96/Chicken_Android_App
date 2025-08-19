@@ -7,15 +7,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.Order
-import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrdersScreen(
     orders: List<Order>,
+    customers: List<Customer>,   // ✅ now passed correctly from MainActivity
     onAddOrder: (Order) -> Unit
 ) {
-    var customerId by remember { mutableStateOf("") }
+    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    var expanded by remember { mutableStateOf(false) }
     var quantityKg by remember { mutableStateOf("") }
     var pricePerKg by remember { mutableStateOf("") }
 
@@ -24,12 +29,41 @@ fun OrdersScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        OutlinedTextField(
-            value = customerId,
-            onValueChange = { customerId = it },
-            label = { Text("Customer ID") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Customer dropdown
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = selectedCustomer?.shopName ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Select Customer") },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                customers.forEach { customer ->
+                    DropdownMenuItem(
+                        text = { Text("${customer.shopName} (${customer.ownerName})") },
+                        onClick = {
+                            selectedCustomer = customer
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = quantityKg,
@@ -49,20 +83,19 @@ fun OrdersScreen(
 
         Button(
             onClick = {
-                val custId = customerId.toIntOrNull()
                 val qty = quantityKg.toDoubleOrNull()
                 val price = pricePerKg.toDoubleOrNull()
 
-                if (custId != null && qty != null && price != null) {
+                if (selectedCustomer != null && qty != null && price != null) {
                     onAddOrder(
                         Order(
-                            customerId = custId,
+                            customerId = selectedCustomer!!.id,
                             date = Date(),
                             quantityKg = qty,
                             pricePerKg = price
                         )
                     )
-                    customerId = ""
+                    selectedCustomer = null
                     quantityKg = ""
                     pricePerKg = ""
                 }
@@ -74,18 +107,16 @@ fun OrdersScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Orders",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Text("Orders", style = MaterialTheme.typography.titleMedium)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
         LazyColumn {
             items(orders) { order ->
-                Text(
-                    "- Customer ${order.customerId}: ${order.quantityKg} kg @ ₹${order.pricePerKg} on ${order.date}"
-                )
+                val customer = customers.find { it.id == order.customerId }
+                val customerName = customer?.shopName ?: "Unknown Customer"
+                val formattedDate = dateFormatter.format(order.date)
+                Text("- $customerName: ${order.quantityKg} kg @ ₹${order.pricePerKg} on $formattedDate")
             }
         }
     }

@@ -7,9 +7,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -22,9 +19,9 @@ import androidx.room.Room
 import com.example.indianchickencenter.model.AppDatabase
 import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.OrderRepository
-import com.example.indianchickencenter.ui.BottomNavigationBar
-import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
 import com.example.indianchickencenter.ui.OrdersScreen
+import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
+import com.example.indianchickencenter.ui.BottomNavigationBar
 import com.example.indianchickencenter.viewmodel.CustomerViewModel
 import com.example.indianchickencenter.viewmodel.CustomerViewModelFactory
 import com.example.indianchickencenter.viewmodel.OrderViewModel
@@ -32,6 +29,7 @@ import com.example.indianchickencenter.viewmodel.OrderViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
+    // ✅ Customer ViewModel tied to Activity
     private val customerViewModel: CustomerViewModel by viewModels {
         CustomerViewModelFactory(application)
     }
@@ -39,7 +37,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Create DB + Repository for Orders
+        // ✅ Create DB + Repository for Orders
         val db = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
@@ -48,11 +46,14 @@ class MainActivity : ComponentActivity() {
 
         val orderRepository = OrderRepository(db.orderDao())
         val orderFactory = OrderViewModelFactory(orderRepository)
-        val orderViewModel: OrderViewModel by viewModels { orderFactory }
 
         setContent {
             IndianChickenCenterTheme {
                 val navController = rememberNavController()
+
+                val orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                    factory = orderFactory
+                )
 
                 Scaffold(
                     bottomBar = { BottomNavigationBar(navController) }
@@ -63,11 +64,12 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable("customers") {
-                            CustomerScreen(customerViewModel)
+                            CustomerScreen(viewModel = customerViewModel)
                         }
                         composable("orders") {
                             OrdersScreen(
-                                orders = orderViewModel.allOrders.collectAsState().value,
+                                orders = orderViewModel.allOrders.collectAsState(initial = emptyList()).value,
+                                customers = customerViewModel.allCustomers.observeAsState(emptyList()).value,
                                 onAddOrder = { orderViewModel.insert(it) }
                             )
                         }
