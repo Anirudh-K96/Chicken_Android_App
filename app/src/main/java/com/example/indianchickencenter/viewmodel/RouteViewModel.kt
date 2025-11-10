@@ -10,11 +10,13 @@ import com.example.indianchickencenter.util.DateUtils
 import com.example.indianchickencenter.util.RoutePlan
 import com.example.indianchickencenter.util.RoutePlanner
 import com.example.indianchickencenter.util.RouteStop
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.Date
+import javax.inject.Inject
 
 data class RouteUiState(
     val isLoading: Boolean = false,
@@ -24,7 +26,8 @@ data class RouteUiState(
     val errorMessage: String? = null
 )
 
-class RouteViewModel(
+@HiltViewModel
+class RouteViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val customerRepository: CustomerRepository,
     private val procurementRepository: ProcurementRepository

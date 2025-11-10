@@ -4,16 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.indianchickencenter.model.Payment
 import com.example.indianchickencenter.model.PaymentRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class PaymentViewModel(private val repository: PaymentRepository) : ViewModel() {
+@HiltViewModel
+class PaymentViewModel @Inject constructor(
+    private val repository: PaymentRepository
+) : ViewModel() {
 
     private val selectedCustomerId = MutableStateFlow<Int?>(null)
     val selectedCustomer: StateFlow<Int?> = selectedCustomerId.asStateFlow()

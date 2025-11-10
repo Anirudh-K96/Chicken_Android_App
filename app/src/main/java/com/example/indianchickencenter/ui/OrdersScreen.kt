@@ -43,6 +43,7 @@ import com.example.indianchickencenter.util.CurrencyUtils
 import com.example.indianchickencenter.util.DateUtils
 import com.example.indianchickencenter.util.FinanceUtils
 import com.example.indianchickencenter.util.RouteStop
+import com.example.indianchickencenter.util.RouteStopType
 import com.example.indianchickencenter.viewmodel.InventoryState
 import com.example.indianchickencenter.viewmodel.RouteUiState
 import kotlinx.coroutines.launch
@@ -331,9 +332,26 @@ private fun RoutePlannerSection(
 private fun RouteStopsList(stops: List<RouteStop>, totalDistance: Double) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         stops.forEachIndexed { index, stop ->
-            Text("${index + 1}. ${stop.label} (${String.format("%.1f km", stop.distanceFromPreviousKm)})")
+            RouteStopRow(position = index + 1, stop = stop)
         }
-        Text("Total distance: ${String.format("%.1f km", totalDistance)}", fontWeight = FontWeight.Bold)
+        Text("Total distance: ${String.format(\"%.1f km\", totalDistance)}", fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun RouteStopRow(position: Int, stop: RouteStop) {
+    val title = when (stop.type) {
+        RouteStopType.BASE -> "Base departure"
+        RouteStopType.PROCUREMENT -> stop.label
+        RouteStopType.CUSTOMER -> stop.relatedCustomer?.shopName ?: stop.label
+    }
+    val subtitle = when (stop.type) {
+        RouteStopType.CUSTOMER -> "Leg: ${String.format(\"%.1f km\", stop.distanceFromPreviousKm)}"
+        else -> "Distance: ${String.format(\"%.1f km\", stop.distanceFromPreviousKm)}"
+    }
+    Column {
+        Text("$position. $title", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall)
     }
 }
 

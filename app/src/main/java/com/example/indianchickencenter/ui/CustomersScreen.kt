@@ -1,5 +1,9 @@
 package com.example.indianchickencenter.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,13 +38,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.CustomerWithBalance
+import com.example.indianchickencenter.model.Order
+import com.example.indianchickencenter.model.Payment
 import com.example.indianchickencenter.util.CurrencyUtils
+import com.example.indianchickencenter.util.DateUtils
+import com.example.indianchickencenter.util.FinanceUtils
 
 @Composable
 fun CustomersScreen(
@@ -48,10 +57,14 @@ fun CustomersScreen(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     onAddCustomer: (Customer) -> Unit,
-    onUpdateLocation: (Int, Double?, Double?) -> Unit
+    onUpdateLocation: (Int, Double?, Double?) -> Unit,
+    orders: List<Order>,
+    payments: List<Payment>
 ) {
     var isAddDialogVisible by remember { mutableStateOf(false) }
     var locationDialogCustomer by remember { mutableStateOf<Customer?>(null) }
+    var detailDialogCustomer by remember { mutableStateOf<Customer?>(null) }
+    val context = LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -84,7 +97,20 @@ fun CustomersScreen(
                             customer = customerWithBalance.customer,
                             balance = customerWithBalance.balance,
                             onEditLocation = { locationDialogCustomer = customerWithBalance.customer },
-                            onCall = { /* Hook up with dialer via intent */ }
+                            onCall = { contact ->
+                                val sanitized = contact.trim()
+                                if (sanitized.isBlank()) {
+                                    Toast.makeText(context, "No phone number available", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$sanitized"))
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, "No dialer app found", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            onViewDetails = { detailDialogCustomer = customerWithBalance.customer }
                         )
                     }
                 }
@@ -121,6 +147,15 @@ fun CustomersScreen(
             }
         )
     }
+
+    detailDialogCustomer?.let { customer ->
+        CustomerDetailDialog(
+            customer = customer,
+            orders = orders,
+            payments = payments,
+            onDismiss = { detailDialogCustomer = null }
+        )
+    }
 }
 
 @Composable
@@ -141,10 +176,13 @@ private fun CustomerCard(
     customer: Customer,
     balance: Double,
     onEditLocation: () -> Unit,
-    onCall: () -> Unit
+    onCall: (String) -> Unit,
+    onViewDetails: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onViewDetails),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -160,7 +198,7 @@ private fun CustomerCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Phone: ${customer.contact}", style = MaterialTheme.typography.bodySmall)
-                IconButton(onClick = onCall) {
+                IconButton(onClick = { onCall(customer.contact) }) {
                     Icon(Icons.Default.Phone, contentDescription = "Call ${customer.shopName}")
                 }
             }
@@ -275,6 +313,7 @@ private fun LocationDialog(
                     value = latitude,
                     onValueChange = { latitude = it },
                     label = { Text("Latitude") },
+                    supportingText = { Text("Example: 12.9716") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -282,6 +321,7 @@ private fun LocationDialog(
                     value = longitude,
                     onValueChange = { longitude = it },
                     label = { Text("Longitude") },
+                    supportingText = { Text("Example: 77.5946") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -293,5 +333,56 @@ private fun LocationDialog(
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun CustomerDetailDialog(
+    customer: Customer,
+    orders: List<Order>,
+    payments: List<Payment>,
+    onDismiss: () -> Unit
+) {
+    val customerOrders = orders.filter { it.customerId == customer.id }.sortedByDescending { it.date }
+    val customerPayments = payments.filter { it.customerId == customer.id }.sortedByDescending { it.date }
+    val totalOrdered = FinanceUtils.aggregateOrdersValue(customerOrders)
+    val totalPaid = customerPayments.sumOf { it.amount }
+    val balance = FinanceUtils.calculateBalance(totalOrdered, totalPaid)
+    val recentOrders = customerOrders.take(3)
+    val recentPayments = customerPayments.take(3)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("${customer.shopName} overview") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Owner: ${customer.ownerName}")
+                Text("Contact: ${customer.contact}")
+                Text("Total ordered: ${CurrencyUtils.format(totalOrdered)}")
+                Text("Total paid: ${CurrencyUtils.format(totalPaid)}")
+                Text("Balance: ${CurrencyUtils.format(balance)}", fontWeight = FontWeight.SemiBold)
+
+                Spacer(Modifier.height(8.dp))
+                Text("Recent orders", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                if (recentOrders.isEmpty()) {
+                    Text("No orders yet", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    recentOrders.forEach { order ->
+                        Text("- ${order.quantityKg} kg @ ₹${order.pricePerKg} • ${DateUtils.formatForList(order.date)}")
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text("Recent payments", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                if (recentPayments.isEmpty()) {
+                    Text("No payments yet", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    recentPayments.forEach { payment ->
+                        Text("- ${CurrencyUtils.format(payment.amount)} via ${payment.method} • ${DateUtils.formatForList(payment.date)}")
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
 }

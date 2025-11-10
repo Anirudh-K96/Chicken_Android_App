@@ -15,47 +15,31 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.indianchickencenter.model.AppDatabase
-import com.example.indianchickencenter.model.CustomerRepository
-import com.example.indianchickencenter.model.OrderRepository
-import com.example.indianchickencenter.model.PaymentRepository
-import com.example.indianchickencenter.model.ProcurementRepository
 import com.example.indianchickencenter.ui.BottomNavigationBar
 import com.example.indianchickencenter.ui.CustomersScreen
 import com.example.indianchickencenter.ui.OrdersScreen
 import com.example.indianchickencenter.ui.PaymentsScreen
 import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
 import com.example.indianchickencenter.viewmodel.CustomerViewModel
-import com.example.indianchickencenter.viewmodel.CustomerViewModelFactory
 import com.example.indianchickencenter.viewmodel.OrderViewModel
-import com.example.indianchickencenter.viewmodel.OrderViewModelFactory
 import com.example.indianchickencenter.viewmodel.PaymentViewModel
-import com.example.indianchickencenter.viewmodel.PaymentViewModelFactory
 import com.example.indianchickencenter.viewmodel.ProcurementViewModel
-import com.example.indianchickencenter.viewmodel.ProcurementViewModelFactory
 import com.example.indianchickencenter.viewmodel.RouteViewModel
-import com.example.indianchickencenter.viewmodel.RouteViewModelFactory
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.hilt.navigation.compose.hiltViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val customerViewModel: CustomerViewModel by viewModels {
-        CustomerViewModelFactory(application)
-    }
+    private val customerViewModel: CustomerViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val database = AppDatabase.getDatabase(applicationContext)
-        val orderRepository = OrderRepository(database.orderDao())
-        val paymentRepository = PaymentRepository(database.paymentDao())
-        val procurementRepository = ProcurementRepository(database.procurementDao())
-        val customerRepository = CustomerRepository(database.customerDao())
 
         setContent {
             IndianChickenCenterTheme {
@@ -64,14 +48,10 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route ?: "customers"
                 val snackbarHostState = remember { SnackbarHostState() }
 
-                val orderViewModel: OrderViewModel = viewModel(factory = OrderViewModelFactory(orderRepository))
-                val paymentViewModel: PaymentViewModel = viewModel(factory = PaymentViewModelFactory(paymentRepository))
-                val procurementViewModel: ProcurementViewModel = viewModel(
-                    factory = ProcurementViewModelFactory(procurementRepository, orderRepository)
-                )
-                val routeViewModel: RouteViewModel = viewModel(
-                    factory = RouteViewModelFactory(orderRepository, customerRepository, procurementRepository)
-                )
+                val orderViewModel: OrderViewModel = hiltViewModel()
+                val paymentViewModel: PaymentViewModel = hiltViewModel()
+                val procurementViewModel: ProcurementViewModel = hiltViewModel()
+                val routeViewModel: RouteViewModel = hiltViewModel()
 
                 val customers by customerViewModel.allCustomers.collectAsState()
                 val customerBalances by customerViewModel.filteredCustomers.collectAsState()
@@ -100,7 +80,9 @@ class MainActivity : ComponentActivity() {
                                 searchQuery = searchQuery,
                                 onSearchChange = customerViewModel::updateSearch,
                                 onAddCustomer = customerViewModel::insert,
-                                onUpdateLocation = customerViewModel::updateLocation
+                                onUpdateLocation = customerViewModel::updateLocation,
+                                orders = orders,
+                                payments = payments
                             )
                         }
                         composable("orders") {
