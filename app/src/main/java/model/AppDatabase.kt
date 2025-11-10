@@ -7,8 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 @Database(
-    entities = [Customer::class, Order::class],
-    version = 1,
+    entities = [Customer::class, Order::class, Payment::class, Procurement::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(DateConverter::class)
@@ -16,6 +16,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun customerDao(): CustomerDao
     abstract fun orderDao(): OrderDao
+    abstract fun paymentDao(): PaymentDao
+    abstract fun procurementDao(): ProcurementDao
 
     companion object {
         @Volatile

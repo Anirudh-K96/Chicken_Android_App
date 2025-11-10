@@ -1,6 +1,7 @@
 package com.example.indianchickencenter.ui
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -13,7 +14,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         BottomNavItem("Customers", "customers", Icons.Filled.Person),
-        BottomNavItem("Orders", "orders", Icons.Filled.ShoppingCart)
+        BottomNavItem("Orders", "orders", Icons.Filled.ShoppingCart),
+        BottomNavItem("Payments", "payments", Icons.Filled.AccountBalance)
     )
 
     NavigationBar {

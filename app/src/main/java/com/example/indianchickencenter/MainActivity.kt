@@ -4,60 +4,90 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
 import com.example.indianchickencenter.model.AppDatabase
-import com.example.indianchickencenter.model.Customer
+import com.example.indianchickencenter.model.CustomerRepository
 import com.example.indianchickencenter.model.OrderRepository
-import com.example.indianchickencenter.ui.OrdersScreen
-import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
+import com.example.indianchickencenter.model.PaymentRepository
+import com.example.indianchickencenter.model.ProcurementRepository
 import com.example.indianchickencenter.ui.BottomNavigationBar
+import com.example.indianchickencenter.ui.CustomersScreen
+import com.example.indianchickencenter.ui.OrdersScreen
+import com.example.indianchickencenter.ui.PaymentsScreen
+import com.example.indianchickencenter.ui.theme.IndianChickenCenterTheme
 import com.example.indianchickencenter.viewmodel.CustomerViewModel
 import com.example.indianchickencenter.viewmodel.CustomerViewModelFactory
 import com.example.indianchickencenter.viewmodel.OrderViewModel
 import com.example.indianchickencenter.viewmodel.OrderViewModelFactory
+import com.example.indianchickencenter.viewmodel.PaymentViewModel
+import com.example.indianchickencenter.viewmodel.PaymentViewModelFactory
+import com.example.indianchickencenter.viewmodel.ProcurementViewModel
+import com.example.indianchickencenter.viewmodel.ProcurementViewModelFactory
+import com.example.indianchickencenter.viewmodel.RouteViewModel
+import com.example.indianchickencenter.viewmodel.RouteViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
-    // ✅ Customer ViewModel tied to Activity
     private val customerViewModel: CustomerViewModel by viewModels {
         CustomerViewModelFactory(application)
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Create DB + Repository for Orders
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "chicken-db"
-        ).build()
-
-        val orderRepository = OrderRepository(db.orderDao())
-        val orderFactory = OrderViewModelFactory(orderRepository)
+        val database = AppDatabase.getDatabase(applicationContext)
+        val orderRepository = OrderRepository(database.orderDao())
+        val paymentRepository = PaymentRepository(database.paymentDao())
+        val procurementRepository = ProcurementRepository(database.procurementDao())
+        val customerRepository = CustomerRepository(database.customerDao())
 
         setContent {
             IndianChickenCenterTheme {
                 val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route ?: "customers"
+                val snackbarHostState = remember { SnackbarHostState() }
 
-                // ✅ Use viewModel(factory=...) inside Compose
-                val orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                    factory = orderFactory
+                val orderViewModel: OrderViewModel = viewModel(factory = OrderViewModelFactory(orderRepository))
+                val paymentViewModel: PaymentViewModel = viewModel(factory = PaymentViewModelFactory(paymentRepository))
+                val procurementViewModel: ProcurementViewModel = viewModel(
+                    factory = ProcurementViewModelFactory(procurementRepository, orderRepository)
+                )
+                val routeViewModel: RouteViewModel = viewModel(
+                    factory = RouteViewModelFactory(orderRepository, customerRepository, procurementRepository)
                 )
 
+                val customers by customerViewModel.allCustomers.collectAsState()
+                val customerBalances by customerViewModel.filteredCustomers.collectAsState()
+                val searchQuery by customerViewModel.searchText.collectAsState()
+                val orders by orderViewModel.allOrders.collectAsState()
+                val inventory by procurementViewModel.inventory.collectAsState()
+                val payments by paymentViewModel.payments.collectAsState()
+                val selectedPaymentCustomerId by paymentViewModel.selectedCustomer.collectAsState()
+                val routeUiState by routeViewModel.uiState.collectAsState()
+
                 Scaffold(
-                    bottomBar = { BottomNavigationBar(navController) }
+                    topBar = {
+                        TopAppBar(title = { Text(titleForRoute(currentRoute)) })
+                    },
+                    bottomBar = { BottomNavigationBar(navController) },
+                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
@@ -65,14 +95,35 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable("customers") {
-                            CustomerScreen(viewModel = customerViewModel)
+                            CustomersScreen(
+                                customers = customerBalances,
+                                searchQuery = searchQuery,
+                                onSearchChange = customerViewModel::updateSearch,
+                                onAddCustomer = customerViewModel::insert,
+                                onUpdateLocation = customerViewModel::updateLocation
+                            )
                         }
                         composable("orders") {
                             OrdersScreen(
-                                orders = orderViewModel.allOrders.collectAsState().value,
-                                customers = customerViewModel.allCustomers.observeAsState(emptyList()).value,
-                                onAddOrder = { orderViewModel.insert(it) },
-                                onDeleteOrder = { orderViewModel.delete(it) }   // ✅ delete order
+                                customers = customers,
+                                orders = orders,
+                                inventoryState = inventory,
+                                snackbarHostState = snackbarHostState,
+                                onAddOrder = orderViewModel::insert,
+                                onDeleteOrder = orderViewModel::delete,
+                                onUpdateProcurement = procurementViewModel::updateQuantity,
+                                onPlanRoute = routeViewModel::generateRouteForToday,
+                                routeUiState = routeUiState
+                            )
+                        }
+                        composable("payments") {
+                            PaymentsScreen(
+                                customers = customerBalances,
+                                selectedCustomerId = selectedPaymentCustomerId,
+                                onSelectCustomer = paymentViewModel::selectCustomer,
+                                payments = payments,
+                                onAddPayment = paymentViewModel::recordPayment,
+                                snackbarHostState = snackbarHostState
                             )
                         }
                     }
@@ -80,72 +131,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
-@Composable
-fun CustomerScreen(viewModel: CustomerViewModel) {
-    var shopName by remember { mutableStateOf("") }
-    var ownerName by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") }
-
-    val customers by viewModel.allCustomers.observeAsState(emptyList())
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        OutlinedTextField(
-            value = shopName,
-            onValueChange = { shopName = it },
-            label = { Text("Shop Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = ownerName,
-            onValueChange = { ownerName = it },
-            label = { Text("Owner Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = contact,
-            onValueChange = { contact = it },
-            label = { Text("Contact") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                if (shopName.isNotBlank() && ownerName.isNotBlank() && contact.isNotBlank()) {
-                    viewModel.insert(
-                        Customer(
-                            shopName = shopName,
-                            ownerName = ownerName,
-                            contact = contact
-                        )
-                    )
-                    shopName = ""
-                    ownerName = ""
-                    contact = ""
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Add Customer")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Saved Customers", style = MaterialTheme.typography.titleMedium)
-
-        LazyColumn {
-            items(customers) { customer ->
-                Text("- ${customer.shopName} (${customer.ownerName}) - ${customer.contact}")
-            }
-        }
+    private fun titleForRoute(route: String): String = when (route) {
+        "customers" -> "Customers"
+        "orders" -> "Orders"
+        "payments" -> "Payments"
+        else -> "Indian Chicken Center"
     }
 }
