@@ -2,9 +2,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt.android)
 }
+
+apply(plugin = "com.google.dagger.hilt.android")
+apply(plugin = "com.google.devtools.ksp")
 
 android {
     namespace = "com.example.indianchickencenter"
@@ -68,7 +69,7 @@ dependencies {
     // ✅ Room
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
-    ksp("androidx.room:room-compiler:$room_version")
+    add("ksp", "androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
 
     // ✅ Lifecycle ViewModel + LiveData
@@ -84,5 +85,9 @@ dependencies {
 
     // Hilt DI
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    add("ksp", libs.hilt.compiler)
+
+    // Ensure latest JavaPoet for Hilt's aggregating tasks
+    implementation("com.squareup:javapoet:1.13.0")
 }

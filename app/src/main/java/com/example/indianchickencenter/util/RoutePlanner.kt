@@ -1,5 +1,4 @@
 package com.example.indianchickencenter.util
-package com.example.indianchickencenter.util
 
 import com.example.indianchickencenter.model.Customer
 import com.example.indianchickencenter.model.Procurement
